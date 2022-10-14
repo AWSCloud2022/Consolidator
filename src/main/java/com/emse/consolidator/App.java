@@ -42,11 +42,12 @@ public class App {
     public static void readCSVAndCompute(String bucketName,S3Client s3,String date){
 
         ArrayList<String> listeNomsFichiersATraiter = getTreatedFiles(s3,bucketName);
-        listeNomsFichiersATraiter.forEach(fichier -> {
+        ArrayList<String> listPourLoop= new ArrayList<String>(listeNomsFichiersATraiter);
+        for (String fichier:listPourLoop){
             if (!shouldTreate(fichier,date)){
                 listeNomsFichiersATraiter.remove(fichier);
             }
-        });
+        };
 
 
 
@@ -54,7 +55,7 @@ public class App {
         String mostProfitableStore ="";
         String leastProfitableStore ="";
         Double valueMostProfitableStore =0.0;
-        Double valueLeastProfitableStore =999999999999999999999999999999999999999999999999999999999.0;
+        Double valueLeastProfitableStore =Double.POSITIVE_INFINITY;
         HashMap<String, Integer> productsTotalQuantity = new HashMap<>();
         HashMap<String, Double> productsTotalSold = new HashMap<>();
         HashMap<String, Double> productsTotalProfit = new HashMap<>();
@@ -105,14 +106,21 @@ public class App {
 
         };
 
-        System.out.println(productsTotalProfit);
-        System.out.println(productsTotalSold);
-        System.out.println(productsTotalQuantity);
-        System.out.println(totalRetailerProfit); //bon
-        System.out.println(leastProfitableStore); //bon
-        System.out.println(mostProfitableStore);    //bon
 
-
+        System.out.printf("\n\nThe total profit on the day is ")  ;
+        System.out.printf("%.1f",totalRetailerProfit);
+        System.out.printf("\n\nThe most profitable store is "+mostProfitableStore+" with a profit of ");
+        System.out.printf("%.1f",valueMostProfitableStore);
+        System.out.printf("\nThe least profitable store is "+leastProfitableStore+" with a profit of ");
+        System.out.printf("%.1f",valueLeastProfitableStore);
+        System.out.println("\n\nResult by products:\n[Product]\t[Total Quantity]\t[Total Sold]\t[Total Profit]");
+        for (String product : productsTotalProfit.keySet()) {
+            System.out.printf(product+"\t\t\t"+productsTotalQuantity.get(product)+"\t\t\t\t");
+            System.out.printf("%.1f",productsTotalSold.get(product));
+            System.out.printf("\t\t");
+            System.out.printf("%.1f",productsTotalProfit.get(product));
+            System.out.printf("\n");
+        }
     }
 
     public static ArrayList<String> getTreatedFiles(S3Client s3,String bucket){
@@ -147,11 +155,11 @@ public class App {
 
     public static void main(String[] args) {
 
-        String bucket = "databucket8906";
+        String bucket = "databucket89062";
         S3Client s3 = S3Client.builder().httpClient(UrlConnectionHttpClient.builder().build()).build();
         S3Object s3Object = S3Object.builder().build();
-        readCSVAndCompute(bucket,s3,"01-10-2022");
-        //System.out.println(listeNameOfFiles(listFiles(s3,bucket)));
+
+        readCSVAndCompute(bucket,s3,"02-10-2022");
 
     }
 }
