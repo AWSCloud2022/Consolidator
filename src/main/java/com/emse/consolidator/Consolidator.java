@@ -65,7 +65,6 @@ public class Consolidator {
                 value = Double.parseDouble(line[3]);
             }
             catch (IOException | NumberFormatException exception) {
-                line = ";;;;".split(";");
                 store = "p0";
                 value = 0.0;
             }
@@ -89,7 +88,7 @@ public class Consolidator {
             });
         }
 
-        System.out.printf("\n\nThe total profit of the day is ");
+        System.out.print("\n\nThe total profit of the day is ");
         System.out.printf("%.1f",totalRetailerProfit);
         System.out.printf("\n\nThe most profitable store is "+mostProfitableStore+" with a profit of ");
         System.out.printf("%.1f",valueMostProfitableStore);
@@ -99,20 +98,16 @@ public class Consolidator {
         for (String product : productsTotalProfit.keySet()) {
             System.out.printf(product+"\t\t\t"+productsTotalQuantity.get(product)+"\t\t\t\t");
             System.out.printf("%.1f",productsTotalSold.get(product));
-            System.out.printf("\t\t");
+            System.out.print("\t\t");
             System.out.printf("%.1f",productsTotalProfit.get(product));
-            System.out.printf("\n");
+            System.out.print("\n");
         }
     }
 
-    public static ArrayList<String> getProcessedFiles(S3Client s3,String bucket){
+    public static ArrayList<String> getProcessedFiles(S3Client s3, String bucket){
         ArrayList<String> validFiles = new ArrayList<>();
-        listNameOfFiles(listFiles(s3,bucket)).forEach(nom -> {
-            try{
-                String a = nom.split("_")[1]; //???
-                validFiles.add(nom);
-            }
-            catch(ArrayIndexOutOfBoundsException ignored){}
+        listNameOfFiles(listFiles(s3, bucket)).forEach(nom -> {
+            if (nom.split("_").length > 2) validFiles.add(nom);
         });
         return validFiles;
     }
@@ -124,16 +119,15 @@ public class Consolidator {
             startDate = df.parse(sDate);
             return startDate;
         }
-        catch (ParseException ignored){};
+        catch (ParseException ignored){}
         return startDate;
     }
 
-    public static boolean shouldProcess(String nomFichier, String date){
-        return (getDate(nomFichier.split("_")[0]).getDay()) == (getDate(date).getDay());
+    public static boolean shouldProcess(String fileName, String date){
+        return (getDate(fileName.split("_")[0]).getDay()) == (getDate(date).getDay());
     }
 
     public static void main(String[] args) {
-
         String bucket = "databucket8906";
         S3Client s3 = S3Client.builder().httpClient(UrlConnectionHttpClient.builder().build()).build();
         //S3Object s3Object = S3Object.builder().build();
