@@ -54,7 +54,7 @@ public class Consolidator {
     }
 
     public static boolean shouldConsolidate(String fileName, String date){
-        return (getDate(fileName.split("_")[0]) == getDate(date));
+        return (getDate(fileName.split("_")[0]).compareTo(getDate(date)) == 0);
     }
 
     public static void readCSVAndCompute(AmazonS3 s3Client, String bucketName, String date){
