@@ -2,10 +2,7 @@ package com.emse.consolidator;
 
 import com.amazonaws.services.s3.AmazonS3;
 import com.amazonaws.services.s3.AmazonS3ClientBuilder;
-import org.javatuples.Triplet;
-import software.amazon.awssdk.http.urlconnection.UrlConnectionHttpClient;
-import software.amazon.awssdk.services.s3.S3Client;
-import software.amazon.awssdk.services.s3.model.*;
+import com.amazonaws.services.s3.model.S3ObjectSummary;
 
 import java.io.BufferedReader;
 import java.io.IOException;
@@ -21,19 +18,48 @@ import java.util.List;
 import java.util.stream.Collectors;
 
 public class Consolidator {
+    public static void main(String[] args) {
+        //Enter the bucket name you wish to read the csv files from
+        String bucketName = "";
+        //Enter the date from which you wish to get statistics from (01-10-2022 or 02-10-2022)
+        String date = "";
 
-    public static ListObjectsResponse listFiles(S3Client s3, String bucket){
-        ListObjectsRequest listBucketsRequest = ListObjectsRequest.builder().bucket(bucket).build();
-        return s3.listObjects(listBucketsRequest);
+        AmazonS3 s3Client = AmazonS3ClientBuilder.defaultClient();
+
+        readCSVAndCompute(s3Client, bucketName, date);
     }
 
-    public static List<String> listNameOfFiles(ListObjectsResponse listObjectsResponse){
-        return listObjectsResponse.contents().stream().map(S3Object::key).collect(Collectors.toList());
+    public static List<String> listFileNames(AmazonS3 s3Client, String bucketname){
+        return s3Client.listObjects(bucketname).getObjectSummaries()
+                .stream().map(S3ObjectSummary::getKey).collect(Collectors.toList());
     }
 
-    public static void readCSVAndCompute(String bucketName, S3Client s3, String date){
-        ArrayList<String> filesToProcess = getProcessedFiles(s3, bucketName);
-        filesToProcess.removeIf(fileName -> (!shouldProcess(fileName, date)));
+    public static ArrayList<String> getProcessedFiles(AmazonS3 s3Client, String bucketName){
+        ArrayList<String> validFiles = new ArrayList<>();
+        listFileNames(s3Client, bucketName).forEach(file -> {
+            if (file.split("_").length >= 2) validFiles.add(file);
+        });
+        return validFiles;
+    }
+
+    public static Date getDate(String sDate){
+        Date startDate = new Date();
+        try {
+            DateFormat df = new SimpleDateFormat("dd-MM-yyyy");
+            startDate = df.parse(sDate);
+            return startDate;
+        }
+        catch (ParseException ignored){}
+        return startDate;
+    }
+
+    public static boolean shouldConsolidate(String fileName, String date){
+        return (getDate(fileName.split("_")[0]) == getDate(date));
+    }
+
+    public static void readCSVAndCompute(AmazonS3 s3Client, String bucketName, String date){
+        List<String> filesToProcess = getProcessedFiles(s3Client, bucketName);
+        filesToProcess.removeIf(fileName -> (!shouldConsolidate(fileName, date)));
 
         double totalRetailerProfit = 0.0;
         String mostProfitableStore = "";
@@ -54,7 +80,6 @@ public class Consolidator {
         double value;
 
         for (String fileName : filesToProcess){
-            AmazonS3 s3Client = AmazonS3ClientBuilder.defaultClient();
             com.amazonaws.services.s3.model.S3Object s3Object = s3Client.getObject(bucketName, fileName);
             InputStreamReader streamReader = new InputStreamReader(s3Object.getObjectContent(), StandardCharsets.UTF_8);
             BufferedReader reader = new BufferedReader(streamReader);
@@ -102,37 +127,5 @@ public class Consolidator {
             System.out.printf("%.1f",productsTotalProfit.get(product));
             System.out.print("\n");
         }
-    }
-
-    public static ArrayList<String> getProcessedFiles(S3Client s3, String bucket){
-        ArrayList<String> validFiles = new ArrayList<>();
-        listNameOfFiles(listFiles(s3, bucket)).forEach(nom -> {
-            if (nom.split("_").length > 2) validFiles.add(nom);
-        });
-        return validFiles;
-    }
-
-    public static Date getDate(String sDate){
-        Date startDate = new Date();
-        try {
-            DateFormat df = new SimpleDateFormat("dd-MM-yyyy");
-            startDate = df.parse(sDate);
-            return startDate;
-        }
-        catch (ParseException ignored){}
-        return startDate;
-    }
-
-    public static boolean shouldProcess(String fileName, String date){
-        return (getDate(fileName.split("_")[0]).getDay()) == (getDate(date).getDay());
-    }
-
-    public static void main(String[] args) {
-        String bucket = "databucket8906";
-        S3Client s3 = S3Client.builder().httpClient(UrlConnectionHttpClient.builder().build()).build();
-        //S3Object s3Object = S3Object.builder().build();
-
-        readCSVAndCompute(bucket,s3,"02-10-2022");
-
     }
 }
